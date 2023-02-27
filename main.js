@@ -51,7 +51,7 @@ async function onConnected(client) {
         console.log("Consuming queue " + queuename);
     } catch (error) {
         console.error(error)
-        process.exit(1)
+        // process.exit(1)
     }
 }
 async function main() {
