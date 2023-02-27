@@ -26,28 +26,33 @@ async function ProcessWorkitemWrapper(workitem) {
     await client.UpdateWorkitem({workitem})
 }
 async function onConnected(client) {
-    var queue = process.env.queue;
-    var wiq = process.env.wiq;
-    if(queue == null || queue == "") queue = wiq;
-    const queuename = await client.RegisterQueue({queuename: queue}, async (message)=> {
-        try {
-            let workitem = null;
-            let counter = 0;
-            do {
-                workitem = await client.PopWorkitem({ wiq, includefiles: true, compressed: false })
-                if(workitem != null) {
-                    counter++;
-                    await ProcessWorkitemWrapper(workitem);
-                }    
-            } while(workitem != null)
-            if(counter > 0) {
-                console.log(`No more workitems in ${wiq} workitem queue`)
+    try {
+        var queue = process.env.queue;
+        var wiq = process.env.wiq;
+        if(queue == null || queue == "") queue = wiq;
+        const queuename = await client.RegisterQueue({queuename: queue}, async (message)=> {
+            try {
+                let workitem = null;
+                let counter = 0;
+                do {
+                    workitem = await client.PopWorkitem({ wiq, includefiles: true, compressed: false })
+                    if(workitem != null) {
+                        counter++;
+                        await ProcessWorkitemWrapper(workitem);
+                    }    
+                } while(workitem != null)
+                if(counter > 0) {
+                    console.log(`No more workitems in ${wiq} workitem queue`)
+                }
+            } catch (error) {
+                console.error(error)                
             }
-        } catch (error) {
-            console.error(error)                
-        }
-    })
-    console.log("Consuming queue " + queuename);
+        })
+        console.log("Consuming queue " + queuename);
+    } catch (error) {
+        console.error(error)
+        process.exit(1)
+    }
 }
 async function main() {
     var wiq = process.env.wiq;
