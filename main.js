@@ -9,13 +9,26 @@ async function ProcessWorkitem(workitem) {
     workitem.name = "Hello kitty"
 }
 async function ProcessWorkitemWrapper(workitem) {
+    var original = [];
+    var files = fs.readdirSync(__dirname);
+    files.forEach(file => {
+        if (fs.lstatSync(file).isFile()) original.push(file);
+    });
     try {
-        for(var i = 0; i < workitem.files.length; i++) {
+        var filename = "";
+        for (var i = 0; i < workitem.files.length; i++) {
             const file = workitem.files[i];
             // await client.DownloadFile({id: file._id});
-            fs.writeFileSync(file.name, file.content);
+            fs.writeFileSync(file.filename, file.file);
+            filename = file.filename;
         }
-        await ProcessWorkitem(workitem);
+        var preserve = [];
+        var files = fs.readdirSync(__dirname);
+        files.forEach(file => {
+            if (fs.lstatSync(file).isFile()) preserve.push(file);
+        });
+
+        await ProcessWorkitem(workitem, filename);
         workitem.state = "successful"
     } catch (error) {
         workitem.state = "retry"
@@ -23,7 +36,21 @@ async function ProcessWorkitemWrapper(workitem) {
         workitem.errormessage = error.message ? error.message : error
         workitem.errorsource = error.stack.toString()
     }
-    await client.UpdateWorkitem({workitem})
+    files = fs.readdirSync(__dirname);
+    files = files.filter(x => preserve.indexOf(x) == -1);
+    files.forEach(file => {
+        if (fs.lstatSync(file).isFile()) {
+            workitem.files.push({ filename: file, file: fs.readFileSync(file) })
+        }
+    });
+    await client.UpdateWorkitem({ workitem })
+    files = fs.readdirSync(__dirname);
+    files = files.filter(x => original.indexOf(x) == -1);
+    files.forEach(file => {
+        if (fs.lstatSync(file).isFile()) {
+            fs.unlinkSync(file);
+        }
+    });
 }
 async function onConnected(client) {
     try {
