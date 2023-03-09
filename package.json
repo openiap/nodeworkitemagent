@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "description": "",
   "main": "main.js",
+  "openiap": {
+    "daemon": true
+  },
   "keywords": [],
   "scripts": {
     "updateapidev": "npm uninstall @openiap/nodeapi && npm i openiap/nodeapi",
