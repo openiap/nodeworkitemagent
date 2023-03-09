@@ -1,4 +1,4 @@
-  {
+{
     "name": "nodeworkitemagent",
     "version": "0.0.1",
     "description": "NodeJS agent processing workitems from a queue",
@@ -6,10 +6,14 @@
     "author": "OpenIAP ApS / Allan Zimmermann",
     "license": "MPL-2.0",
     "openiap": {
-      "daemon": true
+        "daemon": true
     },
     "scripts": {
+        "updateapidev": "npm uninstall @openiap/nodeapi && npm i openiap/nodeapi",
+        "updateapi": "npm uninstall @openiap/nodeapi && npm i @openiap/nodeapi"
     },
-    "keywords": []
-  }
-  
+    "keywords": [],
+    "dependencies": {
+        "@openiap/nodeapi": "github:openiap/nodeapi"
+    }
+}
