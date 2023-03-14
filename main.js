@@ -57,7 +57,7 @@ async function onConnected(client) {
         var queue = process.env.queue;
         var wiq = process.env.wiq;
         if(queue == null || queue == "") queue = wiq;
-        const queuename = await client.RegisterQueue({queuename: queue}, async (message)=> {
+        const queuename = await client.RegisterQueue({queuename: queue}, async (msg, payload, user, jwt)=> {
             try {
                 let workitem = null;
                 let counter = 0;
