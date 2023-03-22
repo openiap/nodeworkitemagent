@@ -6,7 +6,8 @@
     "author": "OpenIAP ApS / Allan Zimmermann",
     "license": "MPL-2.0",
     "openiap": {
-        "daemon": true
+        "daemon": true,
+        "chromium": false
     },
     "scripts": {
         "updateapidev": "npm uninstall @openiap/nodeapi && npm i openiap/nodeapi",
