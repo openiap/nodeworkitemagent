@@ -17,6 +17,6 @@
     },
     "keywords": [],
     "dependencies": {
-        "@openiap/nodeapi": "github:openiap/nodeapi"
+        "@openiap/nodeapi": "^0.0.9"
     }
 }
