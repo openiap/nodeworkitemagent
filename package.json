@@ -7,7 +7,9 @@
     "license": "MPL-2.0",
     "openiap": {
         "daemon": true,
-        "chromium": false
+        "chromium": false,
+        "language": "nodejs",
+        "typescript": false
     },
     "scripts": {
         "updateapidev": "npm uninstall @openiap/nodeapi && npm i openiap/nodeapi",
