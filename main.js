@@ -1,7 +1,8 @@
 const { openiap } = require("@openiap/nodeapi")
 const client = new openiap();
 const fs = require('fs');
-
+// If testing this toward app.openiap.io you MUST update this to your own workitem queue
+const defaultwiq = "nodeagent"
 async function ProcessWorkitem(workitem) {
     console.log(`Processing workitem id ${workitem._id} retry #${workitem.retries}`);
     if(workitem.payload == null) workitem.payload = {};
@@ -56,6 +57,7 @@ async function onConnected(client) {
     try {
         var queue = process.env.queue;
         var wiq = process.env.wiq;
+        if(wiq == null || wiq == "") wiq = defaultwiq;
         if(queue == null || queue == "") queue = wiq;
         const queuename = await client.RegisterQueue({queuename: queue}, async (msg, payload, user, jwt)=> {
             try {
@@ -84,6 +86,7 @@ async function onConnected(client) {
 async function main() {
     var wiq = process.env.wiq;
     var queue = process.env.queue;
+    if(wiq == null || wiq == "") wiq = defaultwiq;
     // if(wiq == null || wiq == "") throw new Error("wiq environment variable is mandatory")
     if(queue == null || queue == "") queue = wiq;
     client.onConnected = onConnected;
