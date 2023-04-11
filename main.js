@@ -1,6 +1,6 @@
 const { openiap } = require("@openiap/nodeapi")
-var client = new openiap();
-var fs = require('fs');
+const client = new openiap();
+const fs = require('fs');
 
 async function ProcessWorkitem(workitem) {
     console.log(`Processing workitem id ${workitem._id} retry #${workitem.retries}`);
