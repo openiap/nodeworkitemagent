@@ -84,7 +84,7 @@ async function onConnected(client) {
 async function main() {
     var wiq = process.env.wiq;
     var queue = process.env.queue;
-    if(wiq == null || wiq == "") throw new Error("wiq environment variable is mandatory")
+    // if(wiq == null || wiq == "") throw new Error("wiq environment variable is mandatory")
     if(queue == null || queue == "") queue = wiq;
     client.onConnected = onConnected;
     await client.connect();
