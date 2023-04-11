@@ -17,6 +17,6 @@
     },
     "keywords": [],
     "dependencies": {
-        "@openiap/nodeapi": "^0.0.9"
+        "@openiap/nodeapi": "^0.0.12"
     }
 }
