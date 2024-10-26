@@ -1,15 +1,15 @@
-const { Client } = require('openiap');
-const client = new Client();
+const { openiap } = require("@openiap/nodeapi")
+const client = new openiap();
 const fs = require('fs');
 // If testing this toward app.openiap.io you MUST update this to your own workitem queue
 const defaultwiq = "nodeagent"
-function ProcessWorkitem(workitem) {
+async function ProcessWorkitem(workitem) {
     console.log(`Processing workitem id ${workitem._id} retry #${workitem.retries}`);
     if(workitem.payload == null) workitem.payload = {};
     workitem.payload.name = "Hello kitty"
     workitem.name = "Hello kitty"
 }
-function ProcessWorkitemWrapper(workitem) {
+async function ProcessWorkitemWrapper(workitem) {
     var original = [];
     var files = fs.readdirSync(__dirname);
     files.forEach(file => {
@@ -17,13 +17,19 @@ function ProcessWorkitemWrapper(workitem) {
     });
     try {
         var filename = "";
+        for (var i = 0; i < workitem.files.length; i++) {
+            const file = workitem.files[i];
+            // await client.DownloadFile({id: file._id});
+            fs.writeFileSync(file.filename, file.file);
+            filename = file.filename;
+        }
         var preserve = [];
         var files = fs.readdirSync(__dirname);
         files.forEach(file => {
             if (fs.lstatSync(file).isFile()) preserve.push(file);
         });
 
-        ProcessWorkitem(workitem, filename);
+        await ProcessWorkitem(workitem, filename);
         workitem.state = "successful"
     } catch (error) {
         workitem.state = "retry"
@@ -31,14 +37,14 @@ function ProcessWorkitemWrapper(workitem) {
         workitem.errormessage = error.message ? error.message : error
         workitem.errorsource = error.stack.toString()
     }
-    let current_files = fs.readdirSync(__dirname);
-    files = [];
-    current_files.forEach(file => {
-        if (fs.lstatSync(file).isFile()) files.push(file);
-    });
-
+    files = fs.readdirSync(__dirname);
     files = files.filter(x => preserve.indexOf(x) == -1);
-    client.update_workitem({ workitem, files })
+    files.forEach(file => {
+        if (fs.lstatSync(file).isFile()) {
+            workitem.files.push({ filename: file, file: fs.readFileSync(file) })
+        }
+    });
+    await client.UpdateWorkitem({ workitem })
     files = fs.readdirSync(__dirname);
     files = files.filter(x => original.indexOf(x) == -1);
     files.forEach(file => {
@@ -47,21 +53,21 @@ function ProcessWorkitemWrapper(workitem) {
         }
     });
 }
-async function onConnected() {
+async function onConnected(client) {
     try {
         var queue = process.env.queue;
         var wiq = process.env.wiq;
         if(wiq == null || wiq == "") wiq = defaultwiq;
         if(queue == null || queue == "") queue = wiq;
-        const queuename = client.register_queue({queuename: queue}, (event)=> {
+        const queuename = await client.RegisterQueue({queuename: queue}, async (msg, payload, user, jwt)=> {
             try {
                 let workitem = null;
                 let counter = 0;
                 do {
-                    workitem = client.pop_workitem({  wiq: wiq });
+                    workitem = await client.PopWorkitem({ wiq, includefiles: true, compressed: false })
                     if(workitem != null) {
                         counter++;
-                        ProcessWorkitemWrapper(workitem);
+                        await ProcessWorkitemWrapper(workitem);
                     }    
                 } while(workitem != null)
                 if(counter > 0) {
@@ -81,15 +87,28 @@ async function main() {
     var wiq = process.env.wiq;
     var queue = process.env.queue;
     if(wiq == null || wiq == "") wiq = defaultwiq;
+    // if(wiq == null || wiq == "") throw new Error("wiq environment variable is mandatory")
     if(queue == null || queue == "") queue = wiq;
+    client.onConnected = onConnected;
     await client.connect();
-    client.on_client_event((event) => {
-        if(event && event.event == "SignedIn") {
-            onConnected().catch((error) => {
-                console.error(error)
-            });
-        }
-    });
-    
+    if(queue != null && queue != ""){
+    } else {
+        let counter = 1;
+        do {
+            let workitem = null;
+            do {
+                workitem = await client.PopWorkitem({ wiq })
+                if(workitem != null) {
+                    counter++;
+                    await ProcessWorkitemWrapper(workitem);
+                }    
+            } while(workitem != null)
+            if(counter > 0) {
+                counter = 0;
+                console.log(`No more workitems in ${wiq} workitem queue`)
+            }
+            await new Promise(resolve => { setTimeout(resolve, 30000) }); // wait 30 seconds
+        } while ( true)
+    }
 }
 main()
