@@ -1,6 +1,6 @@
 {
     "name": "nodeworkitemagent",
-    "version": "0.0.1",
+    "version": "0.0.2",
     "description": "NodeJS agent processing workitems from a queue",
     "main": "main.js",
     "author": "OpenIAP ApS / Allan Zimmermann",
@@ -12,11 +12,11 @@
         "typescript": false
     },
     "scripts": {
-        "updateapidev": "npm uninstall @openiap/nodeapi && npm i openiap/nodeapi",
-        "updateapi": "npm uninstall @openiap/nodeapi && npm i @openiap/nodeapi"
+        "update": "npm uninstall openiap && npm i openiap",
+        "start": "node main.js"
     },
     "keywords": [],
     "dependencies": {
-        "@openiap/nodeapi": "^0.0.12"
+        "openiap": "^0.0.10"
     }
 }
