@@ -1,7 +1,7 @@
 {
     "name": "nodeworkitemagent",
-    "version": "0.0.2",
-    "description": "NodeJS agent processing workitems from a queue",
+    "version": "0.0.1",
+    "description": "Node.js template for processing workitems of a workitem queue in OpenCore",
     "main": "main.js",
     "author": "OpenIAP ApS / Allan Zimmermann",
     "license": "MPL-2.0",
