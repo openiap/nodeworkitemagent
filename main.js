@@ -2,7 +2,7 @@ const { Client } = require('openiap');
 const client = new Client();
 const fs = require('fs');
 // If testing this toward app.openiap.io you MUST update this to your own workitem queue
-const defaultwiq = "nodeagent"
+const defaultwiq = ""
 function ProcessWorkitem(workitem) {
     console.log(`Processing workitem id ${workitem._id} retry #${workitem.retries}`);
     if(workitem.payload == null) workitem.payload = {};
