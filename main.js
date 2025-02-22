@@ -1,5 +1,6 @@
 const { Client } = require('openiap');
 const client = new Client();
+client.enable_tracing("openiap=info", "");
 const fs = require('fs');
 // If testing this toward app.openiap.io you MUST update this to your own workitem queue
 const defaultwiq = ""
