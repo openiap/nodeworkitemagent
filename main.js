@@ -1,96 +1,83 @@
-const { Client } = require('openiap');
+const { Client } = require("openiap");
+const fs = require("fs");
+
 const client = new Client();
 client.enable_tracing("openiap=info", "");
-const fs = require('fs');
-// If testing this toward app.openiap.io you MUST update this to your own workitem queue
-const defaultwiq = ""
-function ProcessWorkitem(workitem) {
-    console.log(`Processing workitem id ${workitem._id} retry #${workitem.retries}`);
-    if(workitem.payload == null) workitem.payload = {};
-    workitem.payload.name = "Hello kitty"
-    workitem.name = "Hello kitty"
+
+// Default workitem queue
+const defaultwiq = "default_queue";
+
+function cleanupFiles(originalFiles) {
+    const currentFiles = fs.readdirSync(__dirname).filter(file => fs.lstatSync(file).isFile());
+    const filesToDelete = currentFiles.filter(file => !originalFiles.includes(file));
+    filesToDelete.forEach(file => fs.unlinkSync(file));
 }
-function ProcessWorkitemWrapper(workitem) {
-    var original = [];
-    var files = fs.readdirSync(__dirname);
-    files.forEach(file => {
-        if (fs.lstatSync(file).isFile()) original.push(file);
-    });
+
+async function ProcessWorkitem(workitem) {
+    client.info(`Processing workitem id ${workitem.id}, retry #${workitem.retries}`);
+    if (!workitem.payload) workitem.payload = {};
+    workitem.payload.name = "Hello kitty";
+    workitem.name = "Hello kitty";
+}
+
+async function ProcessWorkitemWrapper(workitem) {
     try {
-        var filename = "";
-        var preserve = [];
-        var files = fs.readdirSync(__dirname);
-        files.forEach(file => {
-            if (fs.lstatSync(file).isFile()) preserve.push(file);
-        });
-
-        ProcessWorkitem(workitem, filename);
-        workitem.state = "successful"
+        ProcessWorkitem(workitem);
+        workitem.state = "successful";
     } catch (error) {
-        workitem.state = "retry"
-        workitem.errortype = "application" // business rule will never retry / application will retry as mamy times as defined on the workitem queue"
-        workitem.errormessage = error.message ? error.message : error
-        workitem.errorsource = error.stack.toString()
+        workitem.state = "retry";
+        workitem.errortype = "application"; // Retryable error
+        workitem.errormessage = error.message || error;
+        workitem.errorsource = error.stack || "Unknown source";
+        client.error(error.message || error);
     }
-    let current_files = fs.readdirSync(__dirname);
-    files = [];
-    current_files.forEach(file => {
-        if (fs.lstatSync(file).isFile()) files.push(file);
-    });
-
-    files = files.filter(x => preserve.indexOf(x) == -1);
-    client.update_workitem({ workitem, files })
-    files = fs.readdirSync(__dirname);
-    files = files.filter(x => original.indexOf(x) == -1);
-    files.forEach(file => {
-        if (fs.lstatSync(file).isFile()) {
-            fs.unlinkSync(file);
-        }
-    });
+    client.update_workitem({ workitem });
 }
+
 async function onConnected() {
     try {
-        var queue = process.env.queue;
-        var wiq = process.env.wiq;
-        if(wiq == null || wiq == "") wiq = defaultwiq;
-        if(queue == null || queue == "") queue = wiq;
-        const queuename = client.register_queue({queuename: queue}, (event)=> {
+        let wiq = process.env.wiq || defaultwiq;
+        let queue = process.env.queue || wiq;
+        const originalFiles = fs.readdirSync(__dirname).filter(file => fs.lstatSync(file).isFile());
+        const queuename = client.register_queue({ queuename: queue }, async () => {
             try {
-                let workitem = null;
+                let workitem;
                 let counter = 0;
                 do {
-                    workitem = client.pop_workitem({  wiq: wiq });
-                    if(workitem != null) {
+                    workitem = await client.pop_workitem({ wiq });
+                    if (workitem) {
                         counter++;
-                        ProcessWorkitemWrapper(workitem);
-                    }    
-                } while(workitem != null)
-                if(counter > 0) {
-                    console.log(`No more workitems in ${wiq} workitem queue`)
+                        await ProcessWorkitemWrapper(workitem);
+                        cleanupFiles(originalFiles);
+                    }
+                } while (workitem);
+
+                if (counter > 0) {
+                    client.info(`No more workitems in ${wiq} workitem queue`);
                 }
             } catch (error) {
-                console.error(error)                
+                client.error(error.message || error);
+            } finally {
+                cleanupFiles(originalFiles);
             }
-        })
-        console.log("Consuming queue " + queuename);
+        });
+        client.info(`Consuming queue: ${queuename}`);
     } catch (error) {
-        console.error(error)
-        // process.exit(1)
+        client.error(error.message || error);
     }
 }
+
 async function main() {
-    var wiq = process.env.wiq;
-    var queue = process.env.queue;
-    if(wiq == null || wiq == "") wiq = defaultwiq;
-    if(queue == null || queue == "") queue = wiq;
-    await client.connect();
-    client.on_client_event((event) => {
-        if(event && event.event == "SignedIn") {
-            onConnected().catch((error) => {
-                console.error(error)
-            });
-        }
-    });
-    
+    try {
+        await client.connect();
+        client.on_client_event(event => {
+            if (event && event.event === "SignedIn") {
+                onConnected().catch(client.error);
+            }
+        });
+    } catch (error) {
+        client.error(error.message || error);
+    }
 }
-main()
+
+main();
