@@ -1,7 +1,6 @@
 ## Coding Conventions
 
 - Always use **double quotes** for strings.
-- Always use **tabs** for indentation (not spaces).
 - When generating JavaScript, **follow these conventions** strictly.
 
 ## Data Access
@@ -84,7 +83,7 @@ client.download({ collectionname, id, folder, filename })
 ```
 
 ### Work Items
-Work item queues contains a list of "units of work", something that needs to be processed. Items start in state "new", and when we pop an item, the server updates it state to "processing", therefore it's VITAL that we always update the workitem's state to either "retry" if there was an error, or "successful" if there was no error and call update_workitem to save it.
+Work item queues contains a list of "units of work", something that needs to be processed. Items start in state "new", and when we pop an item, the server updates its state to "processing", therefore it's VITAL that we always update the workitem's state to either "retry" if there was an error, or "successful" if there was no error and call update_workitem to save it.
 ```js
 client.push_workitem({ wiq, wiqid, name, payload = "{}", nextrun = 0, success_wiqid = "", failed_wiqid = "", success_wiq = "", failed_wiq = "", priority = 2, files = [] })
 client.pop_workitem({ wiq, wiqid, downloadfolder = "." })
@@ -100,7 +99,7 @@ client.watch({ collectionname, paths }, callback) // callback({id, operation, do
 client.unwatch(watchid)
 // Register a queue and handle incoming messages, returns queuename used for receiving messages
 client.register_queue({ queuename }, callback) // callback({ queuename, correlation_id, replyto, routingkey, exchangename, data })
-// Register an exchage and handle incoming messages, returns queuename used for receiving messages
+// Register an exchange and handle incoming messages, returns queuename used for receiving messages
 client.register_exchange({ exchangename, algorithm, routingkey, addqueue }, callback)  // callback({ queuename, correlation_id, replyto, routingkey, exchangename, data })
 client.unregister_queue(queuename)
 // Sends a message to a message queue or exchange, queuename or exchangename is mandatory, so is data
@@ -113,21 +112,29 @@ client.rpc({ queuename, data, striptoken })
 
 ```js
 // call custom commands, not added to the official API yet, these might change over time and will not be backward compatible 
-client.custom_command({ command, id = "", name = "", data = null })
+client.custom_command({ command, id = "", name = "", data = "" }) // data must be a JSON string or ""
 
 client.on_client_event(callback)
 client.off_client_event(eventid)
 
 client.uniqeid()
-client.formatBytes(bytes, decimals = 2)
+client.formatBytes(bytes, decimals = 2) // used to format a number to b/MB/GB etc.
+client.stringify(obj) // Better error messages than JSON.stringify when input is malformed
+
+// Create an observable gauge, that can be used to create custom graphs in grafana, like keeping track of items processed or users online etx.
+// the client will automatically keep reporting the last set name, until you call disable_observable_gauge
+client.set_f64_observable_gauge(name, value, description)
+client.set_u64_observable_gauge(name, value, description)
+client.set_i64_observable_gauge(name, value, description)
+client.disable_observable_gauge(name)
 
 client.enable_tracing("openiap=info") // Always call this early to enable logging, other options are openiap=error, openiap=debug or openiap=trace
 client.disable_tracing()
 
-client.info(...)
-client.verbose(...)
-client.trace(...)
+client.info(...) // Use this instead of console.log
 client.error(...) // Use this instead of console.error
+client.verbose(...) // Use this instead of console.debug
+client.trace(...)
 ```
 
 ## Logging
@@ -137,6 +144,7 @@ client.error(...) // Use this instead of console.error
 Instead, use the OpenIAP logging functions:
 
 - `client.info(...)`
+- `client.warn(...)`
+- `client.error(...)`
 - `client.verbose(...)`
 - `client.trace(...)`
-- `client.error(...)`
