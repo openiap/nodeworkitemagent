@@ -18,9 +18,10 @@ async function ProcessWorkitem(workitem) {
     if (!workitem.payload) workitem.payload = {};
     workitem.payload.name = "Hello kitty";
     workitem.name = "Hello kitty";
+    fs.writeFileSync("hello.txt", "Hello kitty");
 }
 
-async function ProcessWorkitemWrapper(workitem) {
+async function ProcessWorkitemWrapper(originalFiles, workitem) {
     try {
         ProcessWorkitem(workitem);
         workitem.state = "successful";
@@ -31,7 +32,13 @@ async function ProcessWorkitemWrapper(workitem) {
         workitem.errorsource = error.stack || "Unknown source";
         client.error(error.message || error);
     }
-    client.update_workitem({ workitem });
+    const currentFiles = fs.readdirSync(__dirname).filter(file => fs.lstatSync(file).isFile());
+    const filesAdd = currentFiles.filter(file => !originalFiles.includes(file));
+    if (filesAdd.length > 0) {
+        client.update_workitem({ workitem, files: filesAdd });
+    } else {
+        client.update_workitem({ workitem });
+    }
 }
 
 async function onConnected() {
@@ -47,7 +54,7 @@ async function onConnected() {
                     workitem = await client.pop_workitem({ wiq });
                     if (workitem) {
                         counter++;
-                        await ProcessWorkitemWrapper(workitem);
+                        await ProcessWorkitemWrapper(originalFiles, workitem);
                         cleanupFiles(originalFiles);
                     }
                 } while (workitem);
