@@ -121,7 +121,7 @@ client.off_client_event(eventid)
 client.uniqeid()
 client.formatBytes(bytes, decimals = 2)
 
-client.enable_tracing("openiap=info") // Always call this early to enable logging
+client.enable_tracing("openiap=info") // Always call this early to enable logging, other options are openiap=error, openiap=debug or openiap=trace
 client.disable_tracing()
 
 client.info(...)
