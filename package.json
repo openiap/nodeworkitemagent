@@ -12,11 +12,11 @@
         "typescript": false
     },
     "scripts": {
-        "update": "npm uninstall openiap && npm i openiap",
+        "updateapi": "npm uninstall openiap && npm i openiap",
         "start": "node main.js"
     },
     "keywords": [],
     "dependencies": {
-        "openiap": "^0.0.28"
+        "openiap": "^0.0.33"
     }
 }
