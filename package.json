@@ -17,6 +17,6 @@
     },
     "keywords": [],
     "dependencies": {
-        "openiap": "^0.0.38"
+        "openiap": "0.0.40"
     }
 }
