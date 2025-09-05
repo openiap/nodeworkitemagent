@@ -7,6 +7,15 @@ client.enable_tracing("openiap=info", "");
 // Default workitem queue
 const defaultwiq = "default_queue";
 
+async function ProcessWorkitem(workitem) {
+    client.info(`Processing workitem id ${workitem.id}, retry #${workitem.retries}`);
+    if (!workitem.payload) workitem.payload = {};
+    workitem.payload.name = "Hello kitty";
+    workitem.name = "Hello kitty";
+    fs.writeFileSync("hello.txt", "Hello kitty");
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate async work
+}
+
 function cleanupFiles(originalFiles) {
     try {
         const currentFiles = fs.readdirSync(__dirname).filter(file => {
@@ -33,17 +42,10 @@ function cleanupFiles(originalFiles) {
     }
 }
 
-async function ProcessWorkitem(workitem) {
-    client.info(`Processing workitem id ${workitem.id}, retry #${workitem.retries}`);
-    if (!workitem.payload) workitem.payload = {};
-    workitem.payload.name = "Hello kitty";
-    workitem.name = "Hello kitty";
-    fs.writeFileSync("hello.txt", "Hello kitty");
-}
 
 async function ProcessWorkitemWrapper(originalFiles, workitem) {
     try {
-        ProcessWorkitem(workitem);
+        await ProcessWorkitem(workitem);
         workitem.state = "successful";
     } catch (error) {
         workitem.state = "retry";
@@ -62,9 +64,9 @@ async function ProcessWorkitemWrapper(originalFiles, workitem) {
     });
     const filesAdd = currentFiles.filter(file => !originalFiles.includes(file));
     if (filesAdd.length > 0) {
-        client.update_workitem({ workitem, files: filesAdd });
+        await client.update_workitem({ workitem, files: filesAdd });
     } else {
-        client.update_workitem({ workitem });
+        await client.update_workitem({ workitem });
     }
 }
 
@@ -72,8 +74,10 @@ async function onConnected() {
     try {
         let wiq = process.env.wiq || defaultwiq;
         let queue = process.env.queue || wiq;
+        let vmid = process.env.SF_VMID || "";
         client.info(`Using workitem queue: ${wiq}`);
         client.info(`Using queue name: ${queue}`);
+        client.info(`Running serverless VM ID: ${vmid}`);
         const originalFiles = fs.readdirSync(__dirname).filter(file => {
             try {
                 return fs.existsSync(file) && fs.lstatSync(file).isFile();
@@ -82,8 +86,13 @@ async function onConnected() {
                 return false;
             }
         });
+        let running = false;
         const queuename = client.register_queue({ queuename: queue }, async () => {
             try {
+                if (running) {
+                    return;
+                }
+                running = true;
                 let workitem;
                 let counter = 0;
                 do {
@@ -95,6 +104,9 @@ async function onConnected() {
                     }
                 } while (workitem);
 
+                if (process.env.SF_VMID != null && process.env.SF_VMID != "") {
+                    process.exit(0);
+                }
                 if (counter > 0) {
                     client.info(`No more workitems in ${wiq} workitem queue`);
                 }
@@ -103,6 +115,7 @@ async function onConnected() {
                 process.exit(1);
             } finally {
                 cleanupFiles(originalFiles);
+                running = false;
             }
         });
         client.info(`Consuming queue: ${queuename}`);
