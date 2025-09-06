@@ -54,8 +54,8 @@ function lstat() {
 }
 async function onConnected() {
     try {
-        let wiq = process.env.wiq || defaultwiq;
-        let queue = process.env.queue || wiq;
+        let wiq = (process.env.wiq || process.env.SF_AMQPQUEUE) || defaultwiq;
+        let queue = process.env.queue  || wiq;
         const originalFiles = lstat();
         let working = false;
         const queuename = client.register_queue({ queuename: queue }, async () => {
