@@ -92,6 +92,7 @@ async function onConnected() {
         client.info(`Consuming message queue: ${queuename}`);
     } catch (error) {
         client.error(error.message || error);
+        process.exit(0);
     }
 }
 
