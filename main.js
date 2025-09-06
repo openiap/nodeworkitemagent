@@ -52,44 +52,48 @@ function lstat() {
     });
     return originalFiles;
 }
+let originalFiles = [];
+let working = false;
+async function on_queue_message() {
+    if(working) {
+        return;
+    }
+    try {
+        working = true;
+        let workitem;
+        let counter = 0;
+        do {
+            workitem = client.pop_workitem({ wiq });
+            if (workitem) {
+                counter++;
+                await ProcessWorkitemWrapper(originalFiles, workitem);
+                cleanupFiles(originalFiles);                        
+            }
+        } while (workitem);
+        
+        if (counter > 0) {
+            client.info(`No more workitems in ${wiq} workitem queue`);
+        }
+        if (process.env.SF_VMID != null && process.env.SF_VMID != "") {
+            client.info(`Exiting application as running in serverless VM ${process.env.SF_VMID}`);
+            process.exit(0);
+        }
+    } catch (error) {
+        client.error(error.message || error);
+    } finally {
+        cleanupFiles(originalFiles);
+        working = false;
+    }
+}
 async function onConnected() {
     try {
         let wiq = (process.env.wiq || process.env.SF_AMQPQUEUE) || defaultwiq;
         let queue = process.env.queue  || wiq;
-        const originalFiles = lstat();
-        let working = false;
-        const queuename = client.register_queue({ queuename: queue }, async () => {
-            if(working) {
-                return;
-            }
-            try {
-                working = true;
-                let workitem;
-                let counter = 0;
-                do {
-                    workitem = client.pop_workitem({ wiq });
-                    if (workitem) {
-                        counter++;
-                        await ProcessWorkitemWrapper(originalFiles, workitem);
-                        cleanupFiles(originalFiles);                        
-                    }
-                } while (workitem);
-                
-                if (counter > 0) {
-                    client.info(`No more workitems in ${wiq} workitem queue`);
-                }
-                if (process.env.SF_VMID != null && process.env.SF_VMID != "") {
-                    client.info(`Exiting application as running in serverless VM ${process.env.SF_VMID}`);
-                    process.exit(0);
-                }
-            } catch (error) {
-                client.error(error.message || error);
-            } finally {
-                cleanupFiles(originalFiles);
-                working = false;
-            }
-        });
+        const queuename = client.register_queue({ queuename: queue }, on_queue_message);
         client.info(`Consuming message queue: ${queuename}`);
+        if (process.env.SF_VMID != null && process.env.SF_VMID != "") {
+            on_queue_message().catch(client.error);
+        }
     } catch (error) {
         client.error(error.message || error);
         process.exit(0);
@@ -98,6 +102,7 @@ async function onConnected() {
 
 async function main() {
     try {
+        originalFiles = lstat();
         await client.connect();
         client.on_client_event(event => {
             if (event && event.event === "SignedIn") {
