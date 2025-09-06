@@ -59,6 +59,8 @@ async function on_queue_message() {
         return;
     }
     try {
+        let wiq = (process.env.wiq || process.env.SF_AMQPQUEUE) || defaultwiq;
+        let queue = process.env.queue  || wiq;
         working = true;
         let workitem;
         let counter = 0;
